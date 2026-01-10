@@ -20,6 +20,7 @@ labels:
 
 tracks:
   hr: "Solar8000/HR"
-  spo2: "Solar8000/SPO2"
+  spo2: "Solar8000/PLETH_SPO2"
   art_map: "Solar8000/ART_MBP"
   nibp_map: "Solar8000/NIBP_MBP"
+
