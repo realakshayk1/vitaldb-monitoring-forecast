@@ -1,0 +1,25 @@
+project:
+  name: vitaldb-monitoring-forecast
+
+data:
+  raw_dir: data/raw
+  interim_dir: data/interim
+  processed_dir: data/processed
+
+sampling:
+  interval_seconds: 1
+
+task:
+  lookback_seconds: 300
+  horizon_seconds: 300
+  stride_seconds: 10
+
+labels:
+  map_threshold: 65
+  min_low_duration_seconds: 30
+
+tracks:
+  hr: "Solar8000/HR"
+  spo2: "Solar8000/SPO2"
+  art_map: "Solar8000/ART_MBP"
+  nibp_map: "Solar8000/NIBP_MBP"

@@ -1,0 +1,17 @@
+numpy
+pandas
+scipy
+scikit-learn
+matplotlib
+tqdm
+pyyaml
+pyarrow
+
+lightgbm
+
+vitaldb
+
+fastapi
+uvicorn[standard]
+streamlit
+prometheus-client
