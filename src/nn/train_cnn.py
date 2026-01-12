@@ -127,8 +127,8 @@ def policy_metrics(y: np.ndarray, p: np.ndarray, tau: float) -> Dict[str, float]
 @dataclass
 class RunConfig:
     seeds: List[int] = None
-    epochs: int = 80
-    patience: int = 10
+    epochs: int = 25
+    patience: int = 5
     batch_size: int = 128
     lr: float = 1e-3
     weight_decay: float = 1e-4
@@ -164,7 +164,7 @@ def train_one_seed(seed: int, cfg: RunConfig) -> Dict[str, float]:
     pos_weight = compute_pos_weight(train_ds, device)
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    model = TemporalCNN(in_channels=6, dropout=cfg.dropout).to(device)
+    model = TemporalCNN(in_channels=9, dropout=cfg.dropout).to(device)
 
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -179,8 +179,6 @@ def train_one_seed(seed: int, cfg: RunConfig) -> Dict[str, float]:
     best_val_auprc = -1.0
     bad = 0
     best_path = OUT_DIR / f"cnn_best_seed{seed}.pt"
-    canonical_path = OUT_DIR / "cnn_best.pt"
-
 
 
     for epoch in range(1, cfg.epochs + 1):
@@ -218,21 +216,22 @@ def train_one_seed(seed: int, cfg: RunConfig) -> Dict[str, float]:
             best_val_auprc = val_auprc
             bad = 0
             torch.save(model.state_dict(), best_path)
-            torch.save(model.state_dict(), canonical_path)
         else:
             bad += 1
             if bad >= cfg.patience:
                 print(f"early stopping (no val AUPRC improvement for {cfg.patience} epochs)")
                 break
 
-    # load best and evaluate test
+    # load best and evaluate
     model.load_state_dict(torch.load(best_path, map_location=device))
+
+    # IMPORTANT: recompute VAL probs using the BEST checkpoint
+    yv_best, pv_best = predict_probs(model, val_loader, device)
 
     yt, pt = predict_probs(model, test_loader, device)
     test_metrics = auc_metrics(yt, pt)
 
-    # choose threshold on VAL for target recall, then compute policy metrics on TEST
-    tau = threshold_for_target_recall(yv, pv, target_recall=cfg.target_recall)
+    tau = threshold_for_target_recall(yv_best, pv_best, target_recall=cfg.target_recall)
     pol = policy_metrics(yt, pt, tau=tau)
 
     print(f"\n✅ SEED {seed} TEST: AUROC {test_metrics['auroc']:.3f} | AUPRC {test_metrics['auprc']:.3f}")
@@ -289,6 +288,17 @@ def main():
     print(f"Policy precision: {m_prec:.3f} ± {s_prec:.3f}")
     print(f"Policy recall: {m_rec:.3f} ± {s_rec:.3f}")
     print(f"Policy alert_rate: {m_ar:.3f} ± {s_ar:.3f}")
+
+    # Pick best seed by best_val_auprc and set canonical model path
+    best_run = max(all_runs, key=lambda r: r["best_val_auprc"])
+    best_seed = int(best_run["seed"])
+
+    src_path = OUT_DIR / f"cnn_best_seed{best_seed}.pt"
+    dst_path = OUT_DIR / "cnn_best.pt"
+    dst_path.write_bytes(src_path.read_bytes())
+
+    print(f"✅ Canonical cnn_best.pt set to seed {best_seed} (best_val_auprc={best_run['best_val_auprc']:.4f})")
+
 
     payload = {
         "config": asdict(cfg),

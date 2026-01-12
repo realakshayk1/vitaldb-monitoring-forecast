@@ -58,7 +58,7 @@ def startup():
     store = WindowStore()
 
     # must match your trained model config
-    model = TemporalCNN(in_channels=6).to(device)
+    model = TemporalCNN(in_channels=9).to(device)
     model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
     model.eval()
 

@@ -41,8 +41,9 @@ def simulate_case(times: np.ndarray, probs: np.ndarray, onsets: np.ndarray, tau:
 
         j = np.searchsorted(onsets, t, side="left")
         matched = 0
-        lead = None
-        onset_t = None
+        lead = np.nan
+        onset_t = np.nan
+
 
         while j < len(onsets) and onsets[j] <= t + HORIZON_SEC:
             if not claimed[j]:
@@ -93,7 +94,7 @@ def main():
     test_ds = VitalSeqDataset("test")
     test_loader = DataLoader(test_ds, batch_size=256, shuffle=False, num_workers=0)
 
-    model = TemporalCNN(in_channels=6).to(device)
+    model = TemporalCNN(in_channels=9).to(device)
     model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
     model.eval()
 

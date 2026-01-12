@@ -17,7 +17,7 @@ SIGNALS = ["hr", "spo2", "map"]
 class VitalSeqDataset(Dataset):
     """
     Returns:
-      X: float32 tensor shaped (C, T) where C=6 (3 values + 3 masks), T=LOOKBACK_SEC
+      X: float32 tensor shaped (C, T) where C=9 (3 values + 3 masks + 3 time-since-observed)
       y: float32 scalar (0/1)
     """
     def __init__(self, split: str):
@@ -61,6 +61,18 @@ class VitalSeqDataset(Dataset):
             x = win[s].to_numpy(dtype=float)  # (T,)
             mask = (~np.isnan(x)).astype(np.float32)
 
+            # time since last observed (normalized to [0,1] by window length)
+            ts = np.zeros_like(mask, dtype=np.float32)
+            last = -1
+            T = len(mask)
+            for k in range(T):
+                if mask[k] == 1:
+                    last = k
+                    ts[k] = 0.0
+                else:
+                    ts[k] = (k - last) if last >= 0 else float(T)
+            ts = ts / float(T)
+
             # normalize observed values using train stats; fill missing with 0 after normalization
             mean = float(self.stats[s]["mean"])
             std = float(self.stats[s]["std"])
@@ -69,8 +81,9 @@ class VitalSeqDataset(Dataset):
 
             X_list.append(x_norm)
             X_list.append(mask)
+            X_list.append(ts)
 
-        X = np.stack(X_list, axis=0)  # (6, T)
+        X = np.stack(X_list, axis=0)  # (9, T)
         y = np.float32(row["y"])
 
         return torch.from_numpy(X), torch.tensor(y)

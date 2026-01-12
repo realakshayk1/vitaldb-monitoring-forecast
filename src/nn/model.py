@@ -26,7 +26,7 @@ class TemporalCNN(nn.Module):
             nn.BatchNorm1d(64),
             nn.ReLU(),
 
-            nn.AdaptiveAvgPool1d(1),  # (B, 64, 1)
+            nn.AdaptiveMaxPool1d(1),  # (B, 64, 1)
         )
 
         self.head = nn.Sequential(

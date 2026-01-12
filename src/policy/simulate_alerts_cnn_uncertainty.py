@@ -34,8 +34,9 @@ def simulate_case(times, p_mean, p_std, onsets, tau, sigma_max):
 
         j = np.searchsorted(onsets, t, side="left")
         matched = 0
-        lead = None
-        onset_t = None
+        lead = np.nan
+        onset_t = np.nan
+
 
         while j < len(onsets) and onsets[j] <= t + HORIZON_SEC:
             if not claimed[j]:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import json
 
 from src.nn.split import split_caseids
 
@@ -20,7 +21,6 @@ def main():
     # accumulate sum/count/sumsq over observed values
     sums = {s: 0.0 for s in SIGNALS}
     sumsq = {s: 0.0 for s in SIGNALS}
-    counts = {s: 0 for s in SIGNALALS} if False else None
     counts = {s: 0 for s in SIGNALS}
 
     for cid in train_cases:
@@ -50,7 +50,7 @@ def main():
         "stats": stats,
     }
 
-    (OUT_DIR / "norm_stats.json").write_text(pd.Series(out).to_json())
+    (OUT_DIR / "norm_stats.json").write_text(json.dumps(out, indent=2))
     print("\n✅ norm stats saved to data/processed/seq/norm_stats.json")
     print(stats)
 

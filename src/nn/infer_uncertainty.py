@@ -25,7 +25,7 @@ def main():
     test_ds = VitalSeqDataset("test")
     loader = DataLoader(test_ds, batch_size=256, shuffle=False, num_workers=0)
 
-    model = TemporalCNN(in_channels=6).to(device)
+    model = TemporalCNN(in_channels=9).to(device)
     model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 
     means = []
