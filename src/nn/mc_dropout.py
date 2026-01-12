@@ -13,8 +13,9 @@ def mc_predict_proba(model, X, n_samples: int = 20):
     model.train()  # keep dropout active
     ps = []
     for _ in range(n_samples):
+        T = load_temperature()
         logits = model(X)
-        p = torch.sigmoid(logits)
+        p = torch.sigmoid(logits / T)
         ps.append(p.detach().cpu().numpy())
 
     ps = np.stack(ps, axis=0)  # (S, B)

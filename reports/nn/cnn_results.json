@@ -1,12 +1,12 @@
 {
   "config": {
     "seeds": [
-      7,
-      13,
-      29
+      7
     ],
-    "epochs": 80,
-    "patience": 10,
+    "epochs": 25,
+    "patience": 5,
+    "arch": "tcn",
+    "in_channels": 9,
     "batch_size": 128,
     "lr": 0.001,
     "weight_decay": 0.0001,
@@ -15,46 +15,27 @@
   },
   "runs": [
     {
-      "seed": 7.0,
-      "best_val_auprc": 0.319698158007531,
-      "test_auroc": 0.7680906769580128,
-      "test_auprc": 0.2745548548179994,
-      "tau": 0.2162003517150879,
-      "precision_at_tau": 0.16177667161249404,
-      "recall_at_tau": 0.9037433155077798,
-      "alert_rate_at_tau": 0.6296675801277161
-    },
-    {
-      "seed": 13.0,
-      "best_val_auprc": 0.33612193737139906,
-      "test_auroc": 0.7738754359984358,
-      "test_auprc": 0.27330268265588414,
-      "tau": 0.2070746272802353,
-      "precision_at_tau": 0.1693503887634728,
-      "recall_at_tau": 0.9026737967912025,
-      "alert_rate_at_tau": 0.6007956266403198
-    },
-    {
-      "seed": 29.0,
-      "best_val_auprc": 0.31171745023846614,
-      "test_auroc": 0.7554456688233714,
-      "test_auprc": 0.2750876531200672,
-      "tau": 0.19999918341636658,
-      "precision_at_tau": 0.13615328718399294,
-      "recall_at_tau": 0.9518716577537562,
-      "alert_rate_at_tau": 0.7880111932754517
+      "seed": 7,
+      "best_val_auprc": 0.35093617422393253,
+      "temperature": 0.8159579634666443,
+      "test_auroc": 0.8023913230249131,
+      "test_auprc": 0.32038235335907594,
+      "tau": 0.19816897809505463,
+      "precision_at_tau": 0.1663325696830772,
+      "recall_at_tau": 0.9318181818179326,
+      "alert_rate_at_tau": 0.6314457058906555
     }
   ],
   "aggregate": {
-    "test_auroc_mean": 0.76580392725994,
-    "test_auroc_std": 0.007695712991356392,
-    "test_auprc_mean": 0.2743150635313169,
-    "test_auprc_std": 0.0007481776907384671,
-    "precision_mean": 0.15576011585331992,
-    "precision_std": 0.014204719772479718,
-    "recall_mean": 0.9194295900175794,
-    "recall_std": 0.02294416101204958,
-    "alert_rate_mean": 0.6728248000144958,
-    "alert_rate_std": 0.08229753466900964
+    "test_auroc_mean": 0.8023913230249131,
+    "test_auroc_std": 0.0,
+    "test_auprc_mean": 0.32038235335907594,
+    "test_auprc_std": 0.0,
+    "precision_mean": 0.1663325696830772,
+    "precision_std": 0.0,
+    "recall_mean": 0.9318181818179326,
+    "recall_std": 0.0,
+    "alert_rate_mean": 0.6314457058906555,
+    "alert_rate_std": 0.0
   }
 }

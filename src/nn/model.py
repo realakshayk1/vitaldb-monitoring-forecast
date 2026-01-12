@@ -9,6 +9,10 @@ class TemporalCNN(nn.Module):
     Input:  (B, C, T)  where C includes values + masks (e.g., 6 channels)
     Output: logits shape (B,)
     """
+    def forward_features(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
     def __init__(self, in_channels: int = 6, dropout: float = 0.2):
         super().__init__()
         self.net = nn.Sequential(
@@ -38,6 +42,7 @@ class TemporalCNN(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        z = self.net(x)
+        z = self.forward_features(x)
         logits = self.head(z).squeeze(-1)
         return logits
+

@@ -1,0 +1,25 @@
+{
+  "model": "GBM",
+  "data_path": "data/processed/windows.parquet",
+  "params": {
+    "objective": "binary",
+    "metric": "auc",
+    "learning_rate": 0.05,
+    "num_leaves": 31,
+    "min_data_in_leaf": 100,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 5,
+    "verbosity": -1
+  },
+  "best_iteration": 154,
+  "val": {
+    "auroc": 0.8343174734605889,
+    "auprc": 0.37010439523367406
+  },
+  "test": {
+    "auroc": 0.8412415260137236,
+    "auprc": 0.38805296622567315
+  },
+  "model_path": "models/gbm.txt"
+}

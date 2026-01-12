@@ -8,7 +8,7 @@ MC_SAMPLES = 20
 SEQ_LEN = 60          # number of time steps in the sequence
 STRIDE_SEC = 10       # time between points in the sequence (seconds)
 
-# These must match CNN input channels (in_channels=6).
+# These must match CNN input channels (in_channels=9).
 # Put the exact feature columns used when training the CNN.
 CHANNEL_COLS = [
     "hr_mean", "hr_std", "hr_slope",

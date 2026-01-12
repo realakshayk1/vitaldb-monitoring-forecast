@@ -10,13 +10,22 @@ from sklearn.model_selection import train_test_split
 
 from src.nn.dataset import VitalSeqDataset
 from src.nn.model import TemporalCNN
+from src.nn.model_tcn import TemporalTCN
 
 LABELED_DIR = Path("data/processed/labeled_cases")
 SEQ_DIR = Path("data/processed/seq")
 OUT_DIR = Path("reports/policy")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-MODEL_PATH = Path("models/nn/cnn_best.pt")
+ARCH = "tcn"  # change to "tcn" when needed
+MODEL_PATH = Path(f"models/nn/{ARCH}_best.pt")
+CAL_PATH   = Path(f"models/nn/{ARCH}_calibration.json")
+
+def load_temperature() -> float:
+    if not CAL_PATH.exists():
+        return 1.0
+    obj = json.loads(CAL_PATH.read_text())
+    return float(obj.get("temperature", 1.0))
 
 HORIZON_SEC = 300
 COOLDOWN_SEC = 120
@@ -85,16 +94,25 @@ def summarize(all_alerts: pd.DataFrame, caught: int, total_events: int, total_du
 
 def main():
     if not MODEL_PATH.exists():
-        raise FileNotFoundError("models/nn/cnn_best.pt not found. Finish Step 8A training first.")
+        raise FileNotFoundError(f"models/nn/{ARCH}_best.pt not found. Finish Step 8A training first.")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("device:", device)
+    T = load_temperature()
+    print(f"Using calibration temperature T={T:.3f}")
+
 
     # Load test dataset + its index (so we have caseid, t_end aligned to predictions)
     test_ds = VitalSeqDataset("test")
     test_loader = DataLoader(test_ds, batch_size=256, shuffle=False, num_workers=0)
 
-    model = TemporalCNN(in_channels=9).to(device)
+    if ARCH == "cnn":
+        model = TemporalCNN(in_channels=9).to(device)
+    elif ARCH == "tcn":
+        model = TemporalTCN(in_channels=9).to(device)
+    else:
+        raise ValueError(f"Unknown ARCH={ARCH}")
+
     model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
     model.eval()
 
@@ -102,7 +120,8 @@ def main():
     with torch.no_grad():
         for X, _y in test_loader:
             X = X.to(device)
-            p = torch.sigmoid(model(X)).cpu().numpy()
+            logits = model(X)
+            p = torch.sigmoid(logits / T).cpu().numpy()
             probs.append(p)
 
     probs = np.concatenate(probs)

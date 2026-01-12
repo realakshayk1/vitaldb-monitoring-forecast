@@ -38,6 +38,29 @@ def set_seed(seed: int) -> None:
 # -----------------------------
 # Helpers: predict + metrics
 # -----------------------------
+
+def predict_logits(model: torch.nn.Module, loader: DataLoader, device: str) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Returns:
+      y: shape (N,)
+      logits: shape (N,)
+    """
+    model.eval()
+    ys, ls = [], []
+    with torch.no_grad():
+        for X, y in loader:
+            X = X.to(device)
+            y = y.to(device)
+            logits = model(X)
+
+            ys.append(y.detach().cpu().numpy())
+            ls.append(logits.detach().cpu().numpy())
+
+    y = np.concatenate(ys).astype(np.float32)
+    logits = np.concatenate(ls).astype(np.float32)
+    return y, logits
+
+
 def predict_probs(model: torch.nn.Module, loader: DataLoader, device: str) -> Tuple[np.ndarray, np.ndarray]:
     model.eval()
     ys, ps = [], []
@@ -48,12 +71,40 @@ def predict_probs(model: torch.nn.Module, loader: DataLoader, device: str) -> Tu
             logits = model(X)
             p = torch.sigmoid(logits)
 
+
             ys.append(y.detach().cpu().numpy())
             ps.append(p.detach().cpu().numpy())
 
     y = np.concatenate(ys).astype(np.float32)
     p = np.concatenate(ps).astype(np.float32)
     return y, p
+
+
+def fit_temperature_from_logits(y: np.ndarray, logits: np.ndarray, device: str = "cpu") -> float:
+    """
+    Fit a single scalar temperature T on validation logits to minimize BCEWithLogitsLoss.
+    Returns T (>0).
+    """
+    y_t = torch.tensor(y, dtype=torch.float32, device=device)
+    l_t = torch.tensor(logits, dtype=torch.float32, device=device)
+
+    # Optimize log_T so T = exp(log_T) is always positive
+    log_T = torch.zeros((), requires_grad=True, device=device)
+    loss_fn = torch.nn.BCEWithLogitsLoss()
+
+    opt = torch.optim.LBFGS([log_T], lr=0.1, max_iter=50)
+
+    def closure():
+        opt.zero_grad(set_to_none=True)
+        T = torch.exp(log_T).clamp(1e-3, 100.0)
+        loss = loss_fn(l_t / T, y_t)
+        loss.backward()
+        return loss
+
+    opt.step(closure)
+
+    T = float(torch.exp(log_T).detach().cpu().clamp(1e-3, 100.0))
+    return T
 
 
 def auc_metrics(y: np.ndarray, p: np.ndarray) -> Dict[str, float]:
@@ -129,6 +180,8 @@ class RunConfig:
     seeds: List[int] = None
     epochs: int = 25
     patience: int = 5
+    arch: str = "cnn"       # "cnn" or "tcn"
+    in_channels: int = 9
     batch_size: int = 128
     lr: float = 1e-3
     weight_decay: float = 1e-4
@@ -164,7 +217,14 @@ def train_one_seed(seed: int, cfg: RunConfig) -> Dict[str, float]:
     pos_weight = compute_pos_weight(train_ds, device)
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    model = TemporalCNN(in_channels=9, dropout=cfg.dropout).to(device)
+    if cfg.arch == "cnn":
+        model = TemporalCNN(in_channels=cfg.in_channels, dropout=cfg.dropout).to(device)
+    elif cfg.arch == "tcn":
+        from src.nn.model_tcn import TemporalTCN
+        model = TemporalTCN(in_channels=cfg.in_channels, dropout=cfg.dropout).to(device)
+    else:
+        raise ValueError(f"Unknown arch: {cfg.arch}")
+
 
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -178,7 +238,8 @@ def train_one_seed(seed: int, cfg: RunConfig) -> Dict[str, float]:
 
     best_val_auprc = -1.0
     bad = 0
-    best_path = OUT_DIR / f"cnn_best_seed{seed}.pt"
+    best_path = OUT_DIR / f"{cfg.arch}_best_seed{seed}.pt"
+
 
 
     for epoch in range(1, cfg.epochs + 1):
@@ -225,22 +286,33 @@ def train_one_seed(seed: int, cfg: RunConfig) -> Dict[str, float]:
     # load best and evaluate
     model.load_state_dict(torch.load(best_path, map_location=device))
 
-    # IMPORTANT: recompute VAL probs using the BEST checkpoint
-    yv_best, pv_best = predict_probs(model, val_loader, device)
+    # --- Calibration on VAL (Temperature Scaling) ---
+    yv_best, val_logits = predict_logits(model, val_loader, device)
+    T = fit_temperature_from_logits(yv_best, val_logits, device=device)
 
-    yt, pt = predict_probs(model, test_loader, device)
+    # calibrated val probs
+    pv_best = 1.0 / (1.0 + np.exp(-(val_logits / T)))
+
+    # test logits + calibrated test probs
+    yt, test_logits = predict_logits(model, test_loader, device)
+    pt = 1.0 / (1.0 + np.exp(-(test_logits / T)))
+
+    # AUROC/AUPRC won't change vs uncalibrated (monotonic transform),
+    # but we compute on calibrated probs for consistency.
     test_metrics = auc_metrics(yt, pt)
 
     tau = threshold_for_target_recall(yv_best, pv_best, target_recall=cfg.target_recall)
     pol = policy_metrics(yt, pt, tau=tau)
 
+    print(f"calibration | temperature T={T:.3f}")
     print(f"\n✅ SEED {seed} TEST: AUROC {test_metrics['auroc']:.3f} | AUPRC {test_metrics['auprc']:.3f}")
     print(f"✅ Policy @ recall~{cfg.target_recall:.2f} (val-chosen tau={tau:.3f}): "
           f"precision {pol['precision_at_tau']:.3f} | recall {pol['recall_at_tau']:.3f} | alert_rate {pol['alert_rate_at_tau']:.3f}")
 
     return {
-        "seed": float(seed),
+        "seed": int(seed),
         "best_val_auprc": float(best_val_auprc),
+        "temperature": float(T),
         "test_auroc": float(test_metrics["auroc"]),
         "test_auprc": float(test_metrics["auprc"]),
         **pol,
@@ -253,7 +325,7 @@ def mean_std(xs: List[float]) -> Tuple[float, float]:
 
 
 def main():
-    cfg = RunConfig(seeds=[7, 13, 29])  # change seeds as you like
+    cfg = RunConfig(seeds=[7], arch="tcn", in_channels=9) # change seeds as you like
 
     all_runs: List[Dict[str, float]] = []
     for s in cfg.seeds:
@@ -293,11 +365,20 @@ def main():
     best_run = max(all_runs, key=lambda r: r["best_val_auprc"])
     best_seed = int(best_run["seed"])
 
-    src_path = OUT_DIR / f"cnn_best_seed{best_seed}.pt"
-    dst_path = OUT_DIR / "cnn_best.pt"
+    src_path = OUT_DIR / f"{cfg.arch}_best_seed{best_seed}.pt"
+    dst_path = OUT_DIR / f"{cfg.arch}_best.pt"
     dst_path.write_bytes(src_path.read_bytes())
 
-    print(f"✅ Canonical cnn_best.pt set to seed {best_seed} (best_val_auprc={best_run['best_val_auprc']:.4f})")
+    cal_path = OUT_DIR / f"{cfg.arch}_calibration.json"
+    cal_payload = {
+        "best_seed": best_seed,
+        "temperature": float(best_run.get("temperature", 1.0)),
+    }
+    cal_path.write_text(json.dumps(cal_payload, indent=2))
+    print(f"✅ Saved calibration: {cal_path}")
+
+
+    print(f"✅ Canonical {cfg.arch}_best.pt set to seed {best_seed} (best_val_auprc={best_run['best_val_auprc']:.4f})")
 
 
     payload = {
@@ -312,7 +393,7 @@ def main():
         },
     }
 
-    out_path = REPORT_DIR / "cnn_results.json"
+    out_path = REPORT_DIR / f"{cfg.arch}_results.json"
     out_path.write_text(json.dumps(payload, indent=2))
     print(f"\n📄 Saved: {out_path}")
 
