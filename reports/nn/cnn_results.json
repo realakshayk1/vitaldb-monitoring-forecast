@@ -5,7 +5,7 @@
     ],
     "epochs": 25,
     "patience": 5,
-    "arch": "tcn",
+    "arch": "cnn",
     "in_channels": 9,
     "batch_size": 128,
     "lr": 0.001,
@@ -16,26 +16,26 @@
   "runs": [
     {
       "seed": 7,
-      "best_val_auprc": 0.35093617422393253,
-      "temperature": 0.8159579634666443,
-      "test_auroc": 0.8023913230249131,
-      "test_auprc": 0.32038235335907594,
-      "tau": 0.19816897809505463,
-      "precision_at_tau": 0.1663325696830772,
-      "recall_at_tau": 0.9318181818179326,
-      "alert_rate_at_tau": 0.6314457058906555
+      "best_val_auprc": 0.3657598985844311,
+      "temperature": 0.9979383945465088,
+      "test_auroc": 0.8159232041532535,
+      "test_auprc": 0.3369282252602079,
+      "tau": 0.159928560256958,
+      "precision_at_tau": 0.19669765025112887,
+      "recall_at_tau": 0.9109625668446762,
+      "alert_rate_at_tau": 0.5220156311988831
     }
   ],
   "aggregate": {
-    "test_auroc_mean": 0.8023913230249131,
+    "test_auroc_mean": 0.8159232041532535,
     "test_auroc_std": 0.0,
-    "test_auprc_mean": 0.32038235335907594,
+    "test_auprc_mean": 0.3369282252602079,
     "test_auprc_std": 0.0,
-    "precision_mean": 0.1663325696830772,
+    "precision_mean": 0.19669765025112887,
     "precision_std": 0.0,
-    "recall_mean": 0.9318181818179326,
+    "recall_mean": 0.9109625668446762,
     "recall_std": 0.0,
-    "alert_rate_mean": 0.6314457058906555,
+    "alert_rate_mean": 0.5220156311988831,
     "alert_rate_std": 0.0
   }
 }

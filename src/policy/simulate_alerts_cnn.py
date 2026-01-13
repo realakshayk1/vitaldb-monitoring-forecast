@@ -17,7 +17,7 @@ SEQ_DIR = Path("data/processed/seq")
 OUT_DIR = Path("reports/policy")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-ARCH = "tcn"  # change to "tcn" when needed
+ARCH = "cnn"  # change to "tcn" when needed
 MODEL_PATH = Path(f"models/nn/{ARCH}_best.pt")
 CAL_PATH   = Path(f"models/nn/{ARCH}_calibration.json")
 

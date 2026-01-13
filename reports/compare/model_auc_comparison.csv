@@ -1,3 +1,3 @@
 model,split,auroc_mean,auroc_std,auprc_mean,auprc_std,source
-CNN,test,0.8189176942967175,0.002125427655030503,0.3489821075155883,0.008523794293389524,reports/nn/cnn_results.json
+CNN,test,0.8159232041532535,0.0,0.3369282252602079,0.0,reports/nn/cnn_results.json
 GBM,test,0.8412415260137236,,0.38805296622567315,,reports/gbm/gbm_results.json

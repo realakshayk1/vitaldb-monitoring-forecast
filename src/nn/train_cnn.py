@@ -325,7 +325,7 @@ def mean_std(xs: List[float]) -> Tuple[float, float]:
 
 
 def main():
-    cfg = RunConfig(seeds=[7], arch="tcn", in_channels=9) # change seeds as you like
+    cfg = RunConfig(seeds=[7, 13, 29], arch="cnn", in_channels=9) # change seeds as you like
 
     all_runs: List[Dict[str, float]] = []
     for s in cfg.seeds:

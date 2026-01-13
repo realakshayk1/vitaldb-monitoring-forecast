@@ -13,6 +13,16 @@ class TemporalCNN(nn.Module):
         return self.net(x)
 
 
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Returns a fixed-length embedding per window.
+        Shape: (B, 64)
+        """
+        z = self.net(x)          # (B, 64, 1)
+        z = z.squeeze(-1)        # (B, 64)
+        return z
+    
+
     def __init__(self, in_channels: int = 6, dropout: float = 0.2):
         super().__init__()
         self.net = nn.Sequential(
